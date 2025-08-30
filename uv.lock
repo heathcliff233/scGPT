@@ -1,0 +1,7 @@
+# This file is a placeholder for uv.lock
+# To generate the actual lock file, run: uv lock
+# The lock file will contain exact versions of all dependencies
+# and their subdependencies for reproducible installations.
+
+# For now, this serves as documentation that uv should be used
+# for dependency management in this project.

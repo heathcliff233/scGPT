@@ -1,0 +1,61 @@
+# Git files
+.git
+.gitignore
+
+# Python files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+.pytest_cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+
+# Development environment
+.venv
+venv/
+.env
+.envrc
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+docs/_build/
+
+# Data files (potentially large)
+data/
+*.h5
+*.h5ad
+*.zarr
+
+# Model checkpoints (potentially large)
+*.pt
+*.pth
+*.ckpt
+
+# Temporary files
+tmp/
+temp/
+.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
