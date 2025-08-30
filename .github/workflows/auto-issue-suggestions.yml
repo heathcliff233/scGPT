@@ -1,0 +1,68 @@
+name: Auto Issue Suggestions
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  auto-suggest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Auto-suggest Solutions
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are helping with automatic issue analysis for the scGPT repository - a foundation model for single-cell multi-omics using generative AI.
+            
+            Please analyze this new issue and provide helpful initial suggestions. Follow this approach:
+            
+            **For Bug Reports:**
+            - Acknowledge the issue
+            - Ask for reproduction steps if missing
+            - Suggest checking common issues (installation, dependencies, data format)
+            - Point to relevant documentation or tutorials
+            - Suggest potential workarounds if applicable
+            
+            **For Feature Requests:**
+            - Acknowledge the request
+            - Ask clarifying questions about the use case
+            - Suggest existing alternatives if available
+            - Discuss implementation complexity and timeline considerations
+            - Reference related issues or PRs if they exist
+            
+            **For Questions:**
+            - Provide helpful guidance based on available documentation
+            - Point to relevant tutorials, examples, or documentation sections
+            - Suggest checking existing issues for similar questions
+            - Offer next steps for getting help
+            
+            **For Documentation Issues:**
+            - Acknowledge the documentation gap
+            - Suggest interim solutions or resources
+            - Ask for clarification on what specific information would be helpful
+            
+            **General Guidelines:**
+            - Be welcoming and helpful
+            - Reference specific documentation, tutorials, or code examples when relevant
+            - Use the repository's knowledge (single-cell genomics, transformers, PyTorch)
+            - Mention relevant files or directories when appropriate
+            - Keep suggestions practical and actionable
+            - Add a note that maintainers will review and provide additional guidance
+            
+            Add your suggestions as a comment using:
+            `gh issue comment ${{ github.event.issue.number }} --body "Your helpful comment here"`
+            
+            Start your comment with: "👋 Thanks for opening this issue! Here are some initial suggestions..."
+          
+          claude_args: '--allowed-tools "Bash(gh issue comment:*),Bash(gh issue view:*)"'

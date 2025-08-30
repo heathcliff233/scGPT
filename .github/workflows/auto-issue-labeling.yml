@@ -1,0 +1,66 @@
+name: Auto Issue Labeling
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Auto-label Issue
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            You are helping with automatic issue labeling for the scGPT repository - a foundation model for single-cell multi-omics using generative AI.
+            
+            Please analyze this issue and suggest appropriate labels based on the content. Consider these categories:
+            
+            **Type labels:**
+            - `bug` - Bug reports, errors, unexpected behavior
+            - `enhancement` - Feature requests, improvements
+            - `documentation` - Documentation improvements, clarifications
+            - `question` - Questions about usage, implementation
+            - `maintenance` - Code maintenance, refactoring, cleanup
+            - `ci/cd` - CI/CD, testing, automation related
+            
+            **Component labels:**
+            - `model` - Related to the core scGPT model architecture
+            - `preprocessing` - Data preprocessing, tokenization
+            - `training` - Training, fine-tuning workflows  
+            - `inference` - Model inference, prediction
+            - `integration` - Data integration tasks
+            - `annotation` - Cell type annotation
+            - `perturbation` - Perturbation analysis
+            - `grn` - Gene regulatory network analysis
+            - `tutorial` - Tutorial or example related
+            - `installation` - Installation, setup issues
+            
+            **Priority labels:**
+            - `priority-high` - Critical issues, security, major bugs
+            - `priority-medium` - Important features, moderate bugs
+            - `priority-low` - Nice to have, minor issues
+            
+            **Other labels:**
+            - `good first issue` - Good for new contributors
+            - `help wanted` - Community help requested
+            - `duplicate` - Duplicate of existing issue
+            - `wontfix` - Won't be implemented/fixed
+            
+            Based on the issue title and body, suggest 2-4 appropriate labels and apply them using:
+            `gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2,label3"`
+            
+            Be conservative with priority labels - only use priority-high for security issues or critical bugs that break core functionality.
+          
+          claude_args: '--allowed-tools "Bash(gh issue edit:*),Bash(gh issue view:*)"'
