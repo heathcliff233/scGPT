@@ -1,5 +1,6 @@
 import gc
 import math
+import warnings
 from typing import Dict, Mapping, Optional, Tuple, Any, Union
 
 import torch
@@ -12,14 +13,19 @@ from torch.distributions import Bernoulli
 from tqdm import trange
 
 try:
+    # flash-attn < 2.0
     from flash_attn.flash_attention import FlashMHA
 
     flash_attn_available = True
 except ImportError:
-    import warnings
+    try:
+        # flash-attn >= 2.0
+        from flash_attn.modules.mha import MHA as FlashMHA
 
-    warnings.warn("flash_attn is not installed")
-    flash_attn_available = False
+        flash_attn_available = True
+    except ImportError:
+        warnings.warn("flash_attn is not installed")
+        flash_attn_available = False
 
 from .dsbn import DomainSpecificBatchNorm1d
 from .grad_reverse import grad_reverse

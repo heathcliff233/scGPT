@@ -1,5 +1,6 @@
 import gc
 import math
+import warnings
 from typing import Dict, Mapping, Optional, Tuple, Any, Union
 
 import torch
@@ -12,11 +13,19 @@ from torch.distributions import Bernoulli
 from tqdm import trange
 
 try:
+    # flash-attn < 2.0
     from flash_attn.flash_attention import FlashMHA
-except ImportError:
-    import warnings
 
-    warnings.warn("flash_attn is not installed")
+    flash_attn_available = True
+except ImportError:
+    try:
+        # flash-attn >= 2.0
+        from flash_attn.modules.mha import MHA as FlashMHA
+
+        flash_attn_available = True
+    except ImportError:
+        warnings.warn("flash_attn is not installed")
+        flash_attn_available = False
 
 from .dsbn import DomainSpecificBatchNorm1d
 from .grad_reverse import grad_reverse
@@ -74,6 +83,13 @@ class MultiOmicTransformerModel(nn.Module):
             )
         if cell_emb_style not in ["cls", "avg-pool", "w-pool"]:
             raise ValueError(f"Unknown cell_emb_style: {cell_emb_style}")
+        if use_fast_transformer and not flash_attn_available:
+            warnings.warn(
+                "flash-attn is not installed, using pytorch transformer instead. "
+                "Set use_fast_transformer=False to avoid this warning. "
+                "Installing flash-attn is highly recommended."
+            )
+            use_fast_transformer = False
 
         # TODO: add dropout in the GeneEncoder
         self.encoder = GeneEncoder(ntoken, d_model, padding_idx=vocab[pad_token])
@@ -675,6 +691,9 @@ class FlashTransformerEncoderLayer(nn.Module):
             attention_dropout=dropout,
             **factory_kwargs,
         )
+        # Version compatibility workaround
+        if not hasattr(self.self_attn, "batch_first"):
+            self.self_attn.batch_first = batch_first
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward, **factory_kwargs)
         self.dropout = nn.Dropout(dropout)
