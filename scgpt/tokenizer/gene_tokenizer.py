@@ -1,15 +1,101 @@
 import json
 import pickle
+import warnings
 from pathlib import Path
 from collections import Counter, OrderedDict
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple, Union
 from typing_extensions import Self
 
 import numpy as np
 import pandas as pd
 import torch
-import torchtext.vocab as torch_vocab
-from torchtext.vocab import Vocab
+
+try:
+    import torchtext.vocab as torch_vocab
+    from torchtext.vocab import Vocab
+except Exception as exc:
+    warnings.warn(
+        "torchtext is unavailable or incompatible; using an internal vocab fallback. "
+        f"Original error: {type(exc).__name__}: {exc}"
+    )
+
+    class Vocab:
+        """Small compatibility layer for the subset of torchtext.Vocab used by scGPT."""
+
+        def __init__(self, vocab_source):
+            if isinstance(vocab_source, Vocab):
+                tokens = vocab_source.get_itos()
+            elif hasattr(vocab_source, "get_itos"):
+                tokens = list(vocab_source.get_itos())
+            elif isinstance(vocab_source, Mapping):
+                tokens = list(vocab_source.keys())
+            elif isinstance(vocab_source, (list, tuple)):
+                tokens = list(vocab_source)
+            else:
+                raise ValueError(f"Unsupported vocab source type: {type(vocab_source)}")
+
+            self._itos = []
+            self._stoi = {}
+            self._default_index = None
+            self.vocab = self
+            for tok in tokens:
+                if tok not in self._stoi:
+                    self._stoi[tok] = len(self._itos)
+                    self._itos.append(tok)
+
+        def __contains__(self, token):
+            return token in self._stoi
+
+        def __len__(self):
+            return len(self._itos)
+
+        def __getitem__(self, token):
+            if token in self._stoi:
+                return self._stoi[token]
+            if self._default_index is not None:
+                return self._default_index
+            raise KeyError(token)
+
+        def __call__(self, tokens):
+            if isinstance(tokens, (list, tuple, np.ndarray, pd.Series)):
+                return [self[t] for t in tokens]
+            return self[tokens]
+
+        def _rebuild_stoi(self):
+            self._stoi = {t: i for i, t in enumerate(self._itos)}
+
+        def insert_token(self, token, index):
+            if token in self._stoi:
+                raise ValueError(f"Token already exists: {token}")
+            if index < 0 or index > len(self._itos):
+                raise IndexError(index)
+            self._itos.insert(index, token)
+            self._rebuild_stoi()
+
+        def append_token(self, token):
+            if token in self._stoi:
+                return
+            self._stoi[token] = len(self._itos)
+            self._itos.append(token)
+
+        def set_default_index(self, index):
+            self._default_index = index
+
+        def get_stoi(self):
+            return dict(self._stoi)
+
+        def get_itos(self):
+            return list(self._itos)
+
+    class _TorchVocabCompat:
+        @staticmethod
+        def vocab(ordered_dict, min_freq=1):
+            filtered = OrderedDict(
+                (tok, freq) for tok, freq in ordered_dict.items() if freq >= min_freq
+            )
+            return Vocab(filtered)
+
+    torch_vocab = _TorchVocabCompat()
 
 # from transformers.tokenization_utils import PreTrainedTokenizer
 # from transformers import AutoTokenizer, BertTokenizer
